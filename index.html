@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Two Random Wikipedia Articles</title>
+  <style>
+body {
+  background-color: yellow;
+  height: 100vh;
+  padding: 2rem;
+  box-sizing: border-box;
+}
+
+#title1, #title2 {
+  font-family: dinDong;
+  font-size: 14rem;
+  margin-block-start: 0px;
+  margin-block-end: 0px;
+  line-height: .9;
+}
+
+.open-link{
+    display: none;
+}
+
+#error {
+  display: none;
+}
+
+.wrap {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.article {
+  margin-bottom: 2rem;
+  width: 50%;
+}
+
+.second{
+    position: absolute;
+    bottom: 1rem;
+    right: 0px;
+}
+
+.open-link {
+  display: block;
+  margin-top: 1rem;
+  font-size: 1.5rem;
+  font-family: helvetica;
+  text-decoration: underline;
+  color: black;
+}
+
+.excerpt {
+  font-size: 2rem;
+  font-family: helvetica;
+  width: 75%;
+}
+
+
+#newBtn {
+  width: 200px;
+  height: 200px;
+  background-color: yellow;
+  color: Black;
+  border-radius: 100%;
+  font-size: 2rem;
+  border: 3px solid black;
+  position: fixed;
+  bottom: 1rem;
+  left: 1rem;
+  cursor: pointer;
+  -webkit-animation:spin 4s linear infinite;
+  -moz-animation:spin 4s linear infinite;
+  animation:spin 4s linear infinite;
+}
+
+#newBtn:hover {
+  background-color: black;
+  color: yellow;
+}
+
+@media only screen and (max-width: 900px) {
+    #title1, #title2 {
+  font-family: dinDong;
+  font-size: 4rem;
+  margin-block-start: 0px;
+  margin-block-end: 0px;
+  line-height: .9;
+}
+}
+
+@-moz-keyframes spin { 100% { -moz-transform: rotate(360deg); } }
+@-webkit-keyframes spin { 100% { -webkit-transform: rotate(360deg); } }
+@keyframes spin { 100% { -webkit-transform: rotate(360deg); transform:rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <main class="card" role="main">
+      <div id="loading">Loading…</div>
+
+      <!-- Article 1 -->
+      <div class="article">
+        <h2 id="title1" aria-live="polite"></h2>
+        <div id="excerpt1" class="excerpt"></div>
+        <a id="link1" class="open-link" href="#" target="_blank" rel="noopener noreferrer"></a>
+      </div>
+
+      <!-- Article 2 -->
+      <div class="article second">
+        <span class="black"><h2 id="title2" aria-live="polite"></h2></span>
+        <div id="excerpt2" class="excerpt"></div>
+        <a id="link2" class="open-link" href="#" target="_blank" rel="noopener noreferrer"></a>
+      </div>
+
+      <button id="newBtn">Shuffle</button>
+      <div id="error" hidden></div>
+    </main>
+  </div>
+
+  <script>
+    const loadingEl = document.getElementById('loading');
+    const errorEl = document.getElementById('error');
+    let lang = 'en';
+
+    async function fetchOneArticle(titleEl, excerptEl, linkEl){
+      try{
+        const endpoint = `https://${lang}.wikipedia.org/api/rest_v1/page/random/summary`;
+        const res = await fetch(endpoint, {cache: 'no-store'});
+        if(!res.ok) throw new Error('HTTP ' + res.status);
+        const data = await res.json();
+
+        titleEl.textContent = data.title || 'No title';
+        if(data.extract_html){
+          excerptEl.innerHTML = data.extract_html;
+        } else if(data.extract){
+          excerptEl.textContent = data.extract;
+        } else {
+          excerptEl.textContent = 'No excerpt available.';
+        }
+
+        const url = (data.content_urls && data.content_urls.desktop && data.content_urls.desktop.page) 
+          || `https://${lang}.wikipedia.org/wiki/${encodeURIComponent(data.title)}`;
+        linkEl.href = url;
+        linkEl.textContent = 'Open on Wikipedia';
+
+      } catch(err){
+        console.error(err);
+        errorEl.hidden = false;
+        errorEl.textContent = 'Could not load one of the random articles. Try again.';
+      }
+    }
+
+    async function fetchTwoArticles(){
+      loadingEl.hidden = false;
+      loadingEl.textContent = 'Loading…';
+      errorEl.hidden = true;
+
+      // Clear previous content
+      document.getElementById('title1').textContent = '';
+      document.getElementById('excerpt1').innerHTML = '';
+      document.getElementById('link1').textContent = '';
+      document.getElementById('title2').textContent = '';
+      document.getElementById('excerpt2').innerHTML = '';
+      document.getElementById('link2').textContent = '';
+
+      try{
+        await Promise.all([
+          fetchOneArticle(
+            document.getElementById('title1'),
+            document.getElementById('excerpt1'),
+            document.getElementById('link1')
+          ),
+          fetchOneArticle(
+            document.getElementById('title2'),
+            document.getElementById('excerpt2'),
+            document.getElementById('link2')
+          )
+        ]);
+      }finally{
+        loadingEl.hidden = true;
+      }
+    }
+
+    document.getElementById('newBtn').addEventListener('click', fetchTwoArticles);
+    fetchTwoArticles();
+  </script>
+</body>
+</html>
